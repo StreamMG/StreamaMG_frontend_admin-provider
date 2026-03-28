@@ -1,0 +1,26 @@
+/* src/components/HLSPlayer.module.css */
+.player {
+  position: relative;
+  width: 100%;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 16/9;
+}
+
+.video {
+  width: 100%; height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.loadingOverlay, .errorOverlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px; color: var(--text2);
+  font-size: 14px;
+}
+
+.errorOverlay span { font-size: 32px; }
+.errorOverlay p { color: var(--red); }
