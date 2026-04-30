@@ -1,16 +1,27 @@
 // src/pages/Home.jsx
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { contentsAPI } from '../services/api'
 import ContentCard from '../components/ContentCard'
 import { useAuthStore } from '../stores/authStore'
 import styles from './Home.module.css'
 
 export default function Home() {
+  const { user, isPremium, isProvider, isAdmin } = useAuthStore()
   const [featured, setFeatured] = useState([])
   const [trending, setTrending] = useState([])
   const [loading, setLoading] = useState(true)
-  const { user, isPremium } = useAuthStore()
+
+  const role = user?.role || 'guest'
+
+  // Redirection pour provider et admin
+  if (role === 'provider') {
+    return <Navigate to="/provider" replace />
+  }
+  
+  if (role === 'admin') {
+    return <Navigate to="/admin" replace />
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -21,7 +32,9 @@ export default function Home() {
         ])
         setFeatured(f.data.contents || f.data || [])
         setTrending(t.data.contents || t.data || [])
-      } catch { /* API non connectée → état vide */ }
+      } catch {
+        // API non connectée
+      }
       setLoading(false)
     }
     load()
@@ -42,9 +55,17 @@ export default function Home() {
           </p>
           <div className={styles.heroCtas}>
             <Link to="/catalogue" className={styles.ctaPrimary}>Explorer le catalogue</Link>
-            {!user && <Link to="/register" className={styles.ctaSecondary}>Créer un compte gratuit</Link>}
+            
+            {!user && (
+              <Link to="/register" className={styles.ctaSecondary}>
+                Créer un compte gratuit
+              </Link>
+            )}
+            
             {user && !isPremium() && (
-              <Link to="/payments" className={styles.ctaSecondary}>Passer Premium ⭐</Link>
+              <Link to="/payments" className={styles.ctaSecondary}>
+                Passer Premium ⭐
+              </Link>
             )}
           </div>
         </div>
@@ -62,7 +83,7 @@ export default function Home() {
         <span>
           {loading ? 'Connexion API...' :
            featured.length > 0 ? `API connectée — ${import.meta.env.VITE_API_URL}` :
-           `API hors ligne — Configurez VITE_API_URL dans .env (actuellement: ${import.meta.env.VITE_API_URL})`}
+           `API hors ligne — Configurez VITE_API_URL dans .env`}
         </span>
       </div>
 
@@ -97,25 +118,9 @@ export default function Home() {
         <section className={styles.emptyState}>
           <div className={styles.emptyIcon}>🔌</div>
           <h2>Backend non connecté</h2>
-          <p>
-            Démarrez le serveur backend et configurez <code>VITE_API_URL</code> dans le fichier <code>.env</code>
-          </p>
+          <p>Démarrez le serveur backend et configurez <code>VITE_API_URL</code> dans <code>.env</code></p>
           <div className={styles.envHint}>
             <pre>{`# .env\nVITE_API_URL=http://localhost:3001/api`}</pre>
-          </div>
-          <div className={styles.featureList}>
-            <h3>Fonctionnalités implémentées :</h3>
-            <ul>
-              <li>✅ Auth JWT + Refresh Token automatique</li>
-              <li>✅ Catalogue avec filtres et pagination</li>
-              <li>✅ Lecteur HLS sécurisé (tokens + fingerprint)</li>
-              <li>✅ Modal d'accès freemium (free / premium / paid)</li>
-              <li>✅ Historique de visionnage</li>
-              <li>✅ Progression tutoriels</li>
-              <li>✅ Paiements Stripe (subscribe + purchase)</li>
-              <li>✅ Dashboard Provider (upload multipart + thumbnail obligatoire)</li>
-              <li>✅ Dashboard Admin (stats + gestion contenus/users)</li>
-            </ul>
           </div>
         </section>
       )}

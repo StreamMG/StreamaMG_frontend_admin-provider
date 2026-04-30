@@ -12,6 +12,9 @@ export default function Layout() {
     navigate('/login')
   }
 
+  // Déterminer le rôle
+  const role = user?.role || 'guest'
+
   return (
     <div className={styles.root}>
       <nav className={styles.nav}>
@@ -21,26 +24,43 @@ export default function Layout() {
         </NavLink>
 
         <div className={styles.navLinks}>
-          <NavLink to="/" end className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
-            Accueil
-          </NavLink>
-          <NavLink to="/catalogue" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
-            Catalogue
-          </NavLink>
-          <NavLink to="/tutorials" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
-            Tutoriels
-          </NavLink>
-          {user && (
+          {/* Non connecté + user + premium : voient Accueil */}
+          {(role === 'guest' || role === 'user' || role === 'premium') && (
+            <NavLink to="/" end className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
+              Accueil
+            </NavLink>
+          )}
+
+          {/* Non connecté + user + premium : voient Catalogue */}
+          {(role === 'guest' || role === 'user' || role === 'premium') && (
+            <NavLink to="/catalogue" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
+              Catalogue
+            </NavLink>
+          )}
+
+          {/* Non connecté + user + premium : voient Tutoriels */}
+          {(role === 'guest' || role === 'user' || role === 'premium') && (
+            <NavLink to="/tutorials" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
+              Tutoriels
+            </NavLink>
+          )}
+
+          {/* user + premium : voient Historique */}
+          {(role === 'user' || role === 'premium') && (
             <NavLink to="/history" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
               Historique
             </NavLink>
           )}
-          {isProvider() && (
+
+          {/* provider : voit UNIQUEMENT Provider */}
+          {role === 'provider' && (
             <NavLink to="/provider" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
               Provider
             </NavLink>
           )}
-          {isAdmin() && (
+
+          {/* admin : voit UNIQUEMENT Admin */}
+          {role === 'admin' && (
             <NavLink to="/admin" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
               Admin
             </NavLink>

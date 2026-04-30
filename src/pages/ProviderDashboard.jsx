@@ -1,35 +1,51 @@
 // src/pages/ProviderDashboard.jsx
 import { useEffect, useState, useRef } from 'react'
+import { Navigate } from 'react-router-dom'
 import { providerAPI } from '../services/api'
+import { useAuthStore } from '../stores/authStore'
 import styles from './ProviderDashboard.module.css'
 
 const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001'
 
 export default function ProviderDashboard() {
+  const { user, canAccessProvider } = useAuthStore()
   const [contents, setContents] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
   const [showForm, setShowForm] = useState(false)
-  const formRef = useRef()
 
   const [form, setForm] = useState({
-    title: '', description: '', type: 'video',
-    category: 'film', language: 'mg', accessType: 'free', price: ''
+    title: '',
+    description: '',
+    type: 'video',
+    category: 'film',
+    language: 'mg',
+    accessType: 'free',
+    price: ''
   })
   const [thumbnail, setThumbnail] = useState(null)
   const [media, setMedia] = useState(null)
   const [thumbPreview, setThumbPreview] = useState(null)
 
+  // Redirection si pas provider/admin
+  if (!canAccessProvider()) {
+    return <Navigate to="/" replace />
+  }
+
   const loadContents = async () => {
     try {
       const { data } = await providerAPI.list()
       setContents(data.contents || data || [])
-    } catch {}
+    } catch (err) {
+      console.error('Erreur chargement:', err)
+    }
     setLoading(false)
   }
 
-  useEffect(() => { loadContents() }, [])
+  useEffect(() => {
+    loadContents()
+  }, [])
 
   const setField = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
@@ -41,20 +57,31 @@ export default function ProviderDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!thumbnail) { setUploadError('La vignette est obligatoire.'); return }
-    if (!media) { setUploadError('Le fichier média est obligatoire.'); return }
+    if (!thumbnail) {
+      setUploadError('La vignette est obligatoire.')
+      return
+    }
+    if (!media) {
+      setUploadError('Le fichier média est obligatoire.')
+      return
+    }
 
-    setUploading(true); setUploadError(null)
+    setUploading(true)
+    setUploadError(null)
     const fd = new FormData()
     fd.append('thumbnail', thumbnail)
     fd.append('media', media)
-    Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v) })
+    Object.entries(form).forEach(([k, v]) => {
+      if (v) fd.append(k, v)
+    })
 
     try {
       await providerAPI.upload(fd)
       setShowForm(false)
       setForm({ title: '', description: '', type: 'video', category: 'film', language: 'mg', accessType: 'free', price: '' })
-      setThumbnail(null); setMedia(null); setThumbPreview(null)
+      setThumbnail(null)
+      setMedia(null)
+      setThumbPreview(null)
       loadContents()
     } catch (err) {
       setUploadError(err.response?.data?.message || 'Erreur upload')
@@ -66,7 +93,7 @@ export default function ProviderDashboard() {
     if (!confirm('Supprimer ce contenu ?')) return
     try {
       await providerAPI.delete(id)
-      setContents(c => c.filter(x => x._id !== id))
+      setContents(contents.filter(x => x._id !== id))
     } catch (err) {
       alert(err.response?.data?.message || 'Erreur')
     }
@@ -76,7 +103,7 @@ export default function ProviderDashboard() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1>Dashboard Provider</h1>
-        <button className={styles.btnNew} onClick={() => setShowForm(f => !f)}>
+        <button className={styles.btnNew} onClick={() => setShowForm(!showForm)}>
           {showForm ? '✕ Annuler' : '+ Nouveau contenu'}
         </button>
       </div>
@@ -102,7 +129,7 @@ export default function ProviderDashboard() {
               <div className={styles.field}>
                 <label>Catégorie</label>
                 <select value={form.category} onChange={setField('category')}>
-                  {['film','salegy','hira_gasy','tsapiky','beko','documentaire','podcast','tutoriel'].map(c => (
+                  {['film', 'salegy', 'hira_gasy', 'tsapiky', 'beko', 'documentaire', 'podcast', 'tutoriel'].map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
@@ -118,7 +145,7 @@ export default function ProviderDashboard() {
               {form.accessType === 'paid' && (
                 <div className={styles.field}>
                   <label>Prix (Ariary)</label>
-                  <input type="number" value={form.price} onChange={setField('price')} placeholder="800000" />
+                  <input type="number" value={form.price} onChange={setField('price')} placeholder="8000" />
                 </div>
               )}
             </div>
@@ -132,23 +159,24 @@ export default function ProviderDashboard() {
               <div className={styles.fileField}>
                 <label>
                   🖼️ Vignette <span className={styles.required}>OBLIGATOIRE</span>
-                  <div className={styles.fileInput}>
-                    {thumbPreview
-                      ? <img src={thumbPreview} alt="preview" className={styles.thumbPreview} />
-                      : <div className={styles.filePlaceholder}>Cliquez pour choisir (JPEG/PNG ≤ 5Mo)</div>
-                    }
-                    <input type="file" accept="image/jpeg,image/png" onChange={handleThumbnail} hidden />
+                  <div className={styles.fileInput} onClick={() => document.getElementById('thumbnailInput').click()}>
+                    {thumbPreview ? (
+                      <img src={thumbPreview} alt="preview" className={styles.thumbPreview} />
+                    ) : (
+                      <div className={styles.filePlaceholder}>Cliquez pour choisir (JPEG/PNG ≤ 5Mo)</div>
+                    )}
+                    <input id="thumbnailInput" type="file" accept="image/jpeg,image/png" onChange={handleThumbnail} hidden />
                   </div>
                 </label>
               </div>
               <div className={styles.fileField}>
                 <label>
                   🎬 Fichier média <span className={styles.required}>OBLIGATOIRE</span>
-                  <div className={`${styles.fileInput} ${media ? styles.fileSelected : ''}`}>
+                  <div className={`${styles.fileInput} ${media ? styles.fileSelected : ''}`} onClick={() => document.getElementById('mediaInput').click()}>
                     <div className={styles.filePlaceholder}>
                       {media ? `✅ ${media.name}` : 'Cliquez pour choisir (MP4/MP3)'}
                     </div>
-                    <input type="file" accept="video/mp4,audio/mpeg,audio/mp4" onChange={e => setMedia(e.target.files[0])} hidden />
+                    <input id="mediaInput" type="file" accept="video/mp4,audio/mpeg,audio/mp4" onChange={e => setMedia(e.target.files[0])} hidden />
                   </div>
                 </label>
               </div>
@@ -161,7 +189,6 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* Contents list */}
       <div className={styles.contentList}>
         <h2>Mes contenus ({contents.length})</h2>
         {loading ? (

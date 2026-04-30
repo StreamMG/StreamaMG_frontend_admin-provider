@@ -14,11 +14,18 @@ import AdminDashboard from './pages/AdminDashboard'
 import AccessGateModal from './components/AccessGateModal'
 import { useAuthStore } from './stores/authStore'
 
-function PrivateRoute({ children, role }) {
+// Protection : utilisateur connecté requis
+function PrivateRoute({ children }) {
   const { user } = useAuthStore()
   if (!user) return <Navigate to="/login" replace />
-  if (role === 'admin' && user.role !== 'admin') return <Navigate to="/" replace />
-  if (role === 'provider' && !['provider', 'admin'].includes(user.role)) return <Navigate to="/" replace />
+  return children
+}
+
+// Protection par rôle spécifique
+function RoleRoute({ children, allowedRoles }) {
+  const { user } = useAuthStore()
+  if (!user) return <Navigate to="/login" replace />
+  if (!allowedRoles.includes(user.role)) return <Navigate to="/" replace />
   return children
 }
 
@@ -27,18 +34,45 @@ export default function App() {
     <>
       <AccessGateModal />
       <Routes>
+        {/* Pages publiques */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* Routes avec layout */}
         <Route path="/" element={<Layout />}>
+          {/* Accessibles à tous (connectés ou non) */}
           <Route index element={<Home />} />
           <Route path="catalogue" element={<Catalogue />} />
           <Route path="content/:id" element={<ContentDetail />} />
-          <Route path="history" element={<PrivateRoute><History /></PrivateRoute>} />
           <Route path="tutorials" element={<Tutorials />} />
+
+          {/* Nécessite juste d'être connecté */}
+          <Route path="history" element={<PrivateRoute><History /></PrivateRoute>} />
           <Route path="payments" element={<PrivateRoute><Payments /></PrivateRoute>} />
-          <Route path="provider" element={<PrivateRoute role="provider"><ProviderDashboard /></PrivateRoute>} />
-          <Route path="admin" element={<PrivateRoute role="admin"><AdminDashboard /></PrivateRoute>} />
+
+          {/* Provider : accessible à provider ET admin */}
+          <Route 
+            path="provider" 
+            element={
+              <RoleRoute allowedRoles={['provider', 'admin']}>
+                <ProviderDashboard />
+              </RoleRoute>
+            } 
+          />
+
+          {/* Admin : accessible SEULEMENT à admin */}
+          <Route 
+            path="admin" 
+            element={
+              <RoleRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </RoleRoute>
+            } 
+          />
         </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   )

@@ -37,15 +37,26 @@ export const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
-    try { await authAPI.logout() } catch {}
+    try {
+      await authAPI.logout()
+    } catch {}
     tokenStore.clear()
     set({ user: null, token: null })
   },
 
   clearError: () => set({ error: null }),
 
+  // Helpers de vérification
   isAuthenticated: () => !!get().user,
+
   isPremium: () => get().user?.isPremium === true,
+
   isAdmin: () => get().user?.role === 'admin',
-  isProvider: () => ['provider', 'admin'].includes(get().user?.role),
+
+  isProvider: () => get().user?.role === 'provider',
+
+  canAccessProvider: () => {
+    const role = get().user?.role
+    return role === 'provider' || role === 'admin'
+  },
 }))
